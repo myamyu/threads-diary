@@ -10,7 +10,8 @@ def _():
 
     import polars as pl
 
-    from app.threads import Threads
+    from threads import Threads
+
     return Threads, asdict, pl
 
 
