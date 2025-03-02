@@ -35,6 +35,23 @@ def _():
 
 
 @app.cell
+def _(asdict, pl, threads):
+    import datetime
+    from dateutil.relativedelta import relativedelta
+    today = datetime.date.today()
+    yesterday = today + relativedelta(days=-1)
+
+    posts=threads.get_all_posts(since=yesterday.isoformat())
+    pl.from_dicts([asdict(p) for p in posts])[["id", "timestamp", "text", "replied_to", ]]
+    return datetime, posts, relativedelta, today, yesterday
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
 def _():
     return
 
