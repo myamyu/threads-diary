@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.11.13"
-app = marimo.App(width="medium")
+app = marimo.App(width="full")
 
 
 @app.cell
@@ -11,21 +11,27 @@ def _():
     import polars as pl
 
     from threads import Threads
-
-    return Threads, asdict, pl
+    from pprint import pp
+    return Threads, asdict, pl, pp
 
 
 @app.cell
-def _(Threads, asdict, pl):
+def _(Threads):
     threads = Threads()
-    posts, cursor_before, cursor_after = threads.get_threads(
-        limit=100,
-        since="2025-02-11",
-    )
-    print("before:", cursor_before)
-    print("after:", cursor_after)
-    pl.from_dicts([asdict(p) for p in posts])[["id", "timestamp", "text"]]
-    return cursor_after, cursor_before, posts, threads
+    threads
+    return (threads,)
+
+
+@app.cell
+def _():
+    # posts, cursor_before, cursor_after = threads.get_threads(
+    #     limit=100,
+    #     since="2025-02-11",
+    # )
+    # print("before:", cursor_before)
+    # print("after:", cursor_after)
+    # pl.from_dicts([asdict(p) for p in posts])[["id", "timestamp", "text"]]
+    return
 
 
 @app.cell
