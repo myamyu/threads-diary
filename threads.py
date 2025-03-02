@@ -88,7 +88,6 @@ def _call_api_get(path: str, data: list[tuple[str, str]] = []) -> dict:
     if data:
         url += f"?{urlencode(data)}"
 
-    print(url)
     req = Request(url, headers=headers)
     with urlopen(req) as res:
         body = res.read()
@@ -173,33 +172,6 @@ class Threads:
         posts = res.get("data", [])
         threads_posts = [_thread_data_to_dataclass(p) for p in posts]
 
-        # quoted, repost, reply, rootのデータを取得
-        target_ids = set()
-        for p in threads_posts:
-            if p.quoted_post_id:
-                target_ids.add(p.quoted_post_id)
-            if p.reposted_post_id:
-                target_ids.add(p.reposted_post_id)
-            if p.root_post_id:
-                target_ids.add(p.root_post_id)
-            if p.replied_to_id:
-                target_ids.add(p.replied_to_id)
-
-        # 取得したIDのデータを取得
-        with ThreadPoolExecutor() as exector:
-            futures = {exector.submit(self.get_post, id): id for id in target_ids}
-            for future in futures:
-                post = future.result()
-                for p in threads_posts:
-                    if p.quoted_post_id == post.id:
-                        p.quoted_post = post
-                    if p.reposted_post_id == post.id:
-                        p.reposted_post = post
-                    if p.root_post_id == post.id:
-                        p.root_post = post
-                    if p.replied_to_id == post.id:
-                        p.replied_to = post
-
         return (threads_posts, cursor_before, cursor_after)
 
     def get_threads(
@@ -273,16 +245,22 @@ class Threads:
             投稿のリスト
         """
 
-        def _task(method) -> list[ThreadPost]:
+        def _task(method: callable) -> list[ThreadPost]:
             after = ""
             posts = []
+            cnt = 1
             while True:
+                print(f"{method.__name__}: {cnt}回目, after: {after}")
                 _res, _, after = method(
                     since=since, until=until, limit=100, after=after
                 )
                 if after == "":
+                    print(f"{method.__name__} END : {cnt}回目, posts: {len(posts)} 件")
                     break
                 posts.extend(_res)
+                print(f"{method.__name__}: {cnt}回目, posts: {len(posts)} 件")
+                cnt += 1
+
             return posts
 
         posts = []
@@ -294,6 +272,35 @@ class Threads:
             for f in features:
                 posts.extend(f.result())
 
+        # quoted, repost, reply, rootのデータを取得
+        target_ids = set()
+        for p in posts:
+            if p.quoted_post_id:
+                target_ids.add(p.quoted_post_id)
+            if p.reposted_post_id:
+                target_ids.add(p.reposted_post_id)
+            if p.root_post_id:
+                target_ids.add(p.root_post_id)
+            if p.replied_to_id:
+                target_ids.add(p.replied_to_id)
+
+        print(
+            f"参照データを取得 posts: {len(posts)} 件 target_ids: {len(target_ids)} 件"
+        )
+        # 取得したIDのデータを取得
+        with ThreadPoolExecutor() as exector:
+            futures = {exector.submit(self.get_post, id): id for id in target_ids}
+            for future in futures:
+                post = future.result()
+                for p in posts:
+                    if p.quoted_post_id == post.id:
+                        p.quoted_post = post
+                    if p.reposted_post_id == post.id:
+                        p.reposted_post = post
+                    if p.root_post_id == post.id:
+                        p.root_post = post
+                    if p.replied_to_id == post.id:
+                        p.replied_to = post
         return posts
 
     def get_post(self, id: str) -> ThreadPost:
